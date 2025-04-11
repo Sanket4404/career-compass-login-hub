@@ -84,6 +84,48 @@ export const authService = {
     }
   },
 
+  // Send reset password email with OTP
+  async forgotPassword(email: string) {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error sending reset password email:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Verify OTP and reset password
+  async verifyOTPAndResetPassword(otp: string, email: string, newPassword: string) {
+    try {
+      // Verify the OTP by attempting to exchange it for a session
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'recovery',
+      });
+
+      if (verifyError) throw verifyError;
+
+      // If verification successful, update the password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) throw updateError;
+      
+      return { data: verifyData, error: null };
+    } catch (error) {
+      console.error('Error verifying OTP or resetting password:', error);
+      return { data: null, error };
+    }
+  },
+
   // Sign out the current user
   async signOut() {
     try {

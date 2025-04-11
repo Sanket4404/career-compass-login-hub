@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -5,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Check, Eye, EyeOff, Lock, Mail, User, BrainCog, ChevronRight, Linkedin } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from 'react-router-dom';
+import ForgotPasswordForm from './ForgotPasswordForm';
 
 const AuthForm = () => {
   const { toast } = useToast();
@@ -16,6 +18,7 @@ const AuthForm = () => {
   
   const [showPassword, setShowPassword] = useState(false);
   const [formType, setFormType] = useState<'signin' | 'signup'>('signin');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -117,6 +120,32 @@ const AuthForm = () => {
     }
   };
 
+  if (showForgotPassword) {
+    return (
+      <div className="auth-form-container min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+        <div className="auth-background">
+          <div className="circle bg-primary/20 w-64 h-64 top-[-10%] left-[-5%]"></div>
+          <div className="circle bg-secondary/20 w-96 h-96 bottom-[-15%] right-[-10%]"></div>
+          <div className="square bg-accent/20 w-48 h-48 top-[30%] right-[10%] rotate-12"></div>
+          <div className="circle bg-primary/30 w-40 h-40 bottom-[20%] left-[15%]"></div>
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
+          <div className="flex justify-center mb-6">
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg">
+              <BrainCog className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+          
+          <h1 className="text-3xl font-bold text-center mb-2">Career Compass</h1>
+          <p className="text-muted-foreground text-center mb-8">AI/ML powered career guidance for CS students</p>
+          
+          <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-form-container min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
       <div className="auth-background">
@@ -200,7 +229,10 @@ const AuthForm = () => {
                     <a 
                       href="#" 
                       className="text-sm text-primary hover:underline"
-                      onClick={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowForgotPassword(true);
+                      }}
                     >
                       Forgot password?
                     </a>

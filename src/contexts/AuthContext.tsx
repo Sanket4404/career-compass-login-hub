@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/services/authService';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { UserProfile } from '@/lib/supabase';
 
 type AuthContextType = {
@@ -13,6 +13,8 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<any>;
   signInWithGoogle: () => Promise<any>;
   signInWithLinkedIn: () => Promise<any>;
+  forgotPassword: (email: string) => Promise<any>;
+  verifyOTPAndResetPassword: (otp: string, email: string, newPassword: string) => Promise<any>;
   signOut: () => Promise<any>;
 };
 
@@ -113,6 +115,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return await authService.signInWithLinkedIn();
   };
 
+  const forgotPassword = async (email: string) => {
+    setIsLoading(true);
+    const result = await authService.forgotPassword(email);
+    setIsLoading(false);
+    
+    if (result.error) {
+      toast({
+        title: "Password reset failed",
+        description: result.error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for reset instructions.",
+      });
+    }
+    
+    return result;
+  };
+
+  const verifyOTPAndResetPassword = async (otp: string, email: string, newPassword: string) => {
+    setIsLoading(true);
+    const result = await authService.verifyOTPAndResetPassword(otp, email, newPassword);
+    setIsLoading(false);
+    
+    if (result.error) {
+      toast({
+        title: "Password reset failed",
+        description: result.error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Password reset successful",
+        description: "You can now sign in with your new password.",
+      });
+    }
+    
+    return result;
+  };
+
   const signOut = async () => {
     setIsLoading(true);
     const result = await authService.signOut();
@@ -135,6 +179,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signInWithGoogle,
     signInWithLinkedIn,
+    forgotPassword,
+    verifyOTPAndResetPassword,
     signOut,
   };
 
