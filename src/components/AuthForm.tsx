@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthForm = () => {
   const { toast } = useToast();
-  const { signUp, signIn, signInWithLinkedIn, isLoading } = useAuth();
+  const { signUp, signIn, signInWithGoogle, signInWithLinkedIn, isLoading } = useAuth();
   const navigate = useNavigate();
   
   const [showPassword, setShowPassword] = useState(false);
@@ -105,6 +105,8 @@ const AuthForm = () => {
     try {
       if (provider === 'linkedin') {
         await signInWithLinkedIn();
+      } else if (provider === 'google') {
+        await signInWithGoogle();
       }
     } catch (error: any) {
       toast({
@@ -262,7 +264,7 @@ const AuthForm = () => {
                 variant="outline" 
                 type="button" 
                 className="bg-white/50 dark:bg-gray-800/50"
-                onClick={() => {}}
+                onClick={() => handleSocialLogin('google')}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path

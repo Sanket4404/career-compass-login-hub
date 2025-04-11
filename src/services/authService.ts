@@ -52,6 +52,22 @@ export const authService = {
     }
   },
 
+  // Sign in with Google (OAuth)
+  async signInWithGoogle() {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      return { data: null, error };
+    }
+  },
+
   // Sign in with LinkedIn (OAuth)
   async signInWithLinkedIn() {
     try {

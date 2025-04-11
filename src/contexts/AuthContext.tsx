@@ -11,6 +11,7 @@ type AuthContextType = {
   isLoading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
+  signInWithGoogle: () => Promise<any>;
   signInWithLinkedIn: () => Promise<any>;
   signOut: () => Promise<any>;
 };
@@ -104,6 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result;
   };
 
+  const signInWithGoogle = async () => {
+    return await authService.signInWithGoogle();
+  };
+
   const signInWithLinkedIn = async () => {
     return await authService.signInWithLinkedIn();
   };
@@ -128,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     signUp,
     signIn,
+    signInWithGoogle,
     signInWithLinkedIn,
     signOut,
   };
