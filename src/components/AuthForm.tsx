@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Check, Eye, EyeOff, Lock, Mail, User, BrainCog, ChevronRight } from 'lucide-react';
+import { Check, Eye, EyeOff, Lock, Mail, User, BrainCog, ChevronRight, Linkedin } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 
 const AuthForm = () => {
@@ -17,15 +17,13 @@ const AuthForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
-    studentId: ''
+    password: ''
   });
   
   const [errors, setErrors] = useState({
     name: '',
     email: '',
-    password: '',
-    studentId: ''
+    password: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,11 +64,6 @@ const AuthForm = () => {
       valid = false;
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
-      valid = false;
-    }
-    
-    if (formType === 'signup' && !formData.studentId.trim()) {
-      newErrors.studentId = 'Student ID is required';
       valid = false;
     }
     
@@ -206,21 +199,6 @@ const AuthForm = () => {
                 {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
               
-              {formType === "signup" && (
-                <div className="space-y-2 mb-4">
-                  <Label htmlFor="studentId">Student ID</Label>
-                  <Input 
-                    id="studentId" 
-                    name="studentId"
-                    placeholder="Enter your student ID" 
-                    className={`${errors.studentId ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                    value={formData.studentId}
-                    onChange={handleInputChange}
-                  />
-                  {errors.studentId && <p className="text-sm text-red-500">{errors.studentId}</p>}
-                </div>
-              )}
-              
               <Button type="submit" className="w-full mt-4" disabled={isLoading}>
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -263,13 +241,8 @@ const AuthForm = () => {
                 Google
               </Button>
               <Button variant="outline" type="button" className="bg-white/50 dark:bg-gray-800/50">
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22,12c0-5.523-4.477-10-10-10S2,6.477,2,12c0,4.991,3.657,9.128,8.438,9.878v-6.987h-2.54V12h2.54V9.797c0-2.506,1.492-3.89,3.777-3.89c1.094,0,2.238,0.195,2.238,0.195v2.46h-1.26c-1.243,0-1.63,0.771-1.63,1.562V12h2.773l-0.443,2.89h-2.33v6.988C18.343,21.128,22,16.991,22,12z"
-                  />
-                </svg>
-                Facebook
+                <Linkedin className="mr-2 h-4 w-4" />
+                LinkedIn
               </Button>
             </div>
             
