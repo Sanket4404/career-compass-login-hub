@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,12 +6,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Check, Eye, EyeOff, Lock, Mail, User, BrainCog, ChevronRight, Linkedin } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from 'react-router-dom';
 
 const AuthForm = () => {
   const { toast } = useToast();
+  const { signUp, signIn, signInWithLinkedIn, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
   const [showPassword, setShowPassword] = useState(false);
   const [formType, setFormType] = useState<'signin' | 'signup'>('signin');
-  const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -33,7 +36,6 @@ const AuthForm = () => {
       [name]: value
     });
     
-    // Clear error when user types
     if (errors[name as keyof typeof errors]) {
       setErrors({
         ...errors,
@@ -71,21 +73,46 @@ const AuthForm = () => {
     return valid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
     
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      if (formType === 'signin') {
+        const { error } = await signIn(formData.email, formData.password);
+        if (!error) {
+          navigate('/dashboard');
+        }
+      } else {
+        const { error } = await signUp(formData.email, formData.password, formData.name);
+        if (!error) {
+          toast({
+            title: "Account created successfully!",
+            description: "Please check your email to verify your account.",
+          });
+        }
+      }
+    } catch (error: any) {
       toast({
-        title: formType === 'signin' ? "Signed in successfully!" : "Account created successfully!",
-        description: "Welcome to AI/ML Career Compass",
-        variant: "default",
+        title: "Error",
+        description: error.message || "An error occurred. Please try again.",
+        variant: "destructive",
       });
-    }, 1500);
+    }
+  };
+
+  const handleSocialLogin = async (provider: 'linkedin' | 'google') => {
+    try {
+      if (provider === 'linkedin') {
+        await signInWithLinkedIn();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Login Error",
+        description: error.message || `Failed to sign in with ${provider}`,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -231,7 +258,12 @@ const AuthForm = () => {
             </div>
             
             <div className="grid grid-cols-2 gap-4 w-full">
-              <Button variant="outline" type="button" className="bg-white/50 dark:bg-gray-800/50">
+              <Button 
+                variant="outline" 
+                type="button" 
+                className="bg-white/50 dark:bg-gray-800/50"
+                onClick={() => {}}
+              >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
@@ -240,7 +272,12 @@ const AuthForm = () => {
                 </svg>
                 Google
               </Button>
-              <Button variant="outline" type="button" className="bg-white/50 dark:bg-gray-800/50">
+              <Button 
+                variant="outline" 
+                type="button" 
+                className="bg-white/50 dark:bg-gray-800/50"
+                onClick={() => handleSocialLogin('linkedin')}
+              >
                 <Linkedin className="mr-2 h-4 w-4" />
                 LinkedIn
               </Button>
