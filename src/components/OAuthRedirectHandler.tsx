@@ -28,9 +28,9 @@ const OAuthRedirectHandler = () => {
         } else {
           navigate('/dashboard');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error handling OAuth redirect:', err);
-        setError('An unexpected error occurred');
+        setError(err.message || 'An unexpected error occurred');
         setTimeout(() => navigate('/'), 3000);
       }
     };
