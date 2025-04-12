@@ -20,6 +20,7 @@ export type UserProfile = {
   email: string;
   avatar_url?: string;
   created_at: string;
+  last_login?: string;
 }
 
 // Define career assessment result type
@@ -39,4 +40,32 @@ export type LoginActivity = {
   user_id: string;
   login_time: string;
   ip_address: string;
+  profiles?: UserProfile; // For joined queries
 }
+
+// Enable real-time subscriptions
+export const setupRealtimeSubscriptions = () => {
+  // Enable real-time on profiles table
+  supabase
+    .channel('profiles')
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'profiles' 
+    }, payload => {
+      console.log('Real-time update on profiles:', payload);
+    })
+    .subscribe();
+
+  // Enable real-time on login_activity table
+  supabase
+    .channel('login_activity')
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'login_activity' 
+    }, payload => {
+      console.log('Real-time update on login_activity:', payload);
+    })
+    .subscribe();
+};

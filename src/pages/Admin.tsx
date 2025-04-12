@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
-import { UserProfile, LoginActivity } from '@/lib/supabase';
+import { UserProfile, LoginActivity, supabase, setupRealtimeSubscriptions } from '@/lib/supabase';
 import { useToast } from "@/hooks/use-toast";
 import { 
   Users, Search, Filter, SlidersHorizontal, LogOut, 
@@ -17,46 +17,93 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery } from '@tanstack/react-query';
 
 const Admin = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loginActivity, setLoginActivity] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
+  // Set up real-time subscriptions when the component mounts
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch all user profiles
-        const usersResponse = await authService.getAllUserProfiles();
-        if (usersResponse.error) throw usersResponse.error;
-        setUsers(usersResponse.data || []);
+    setupRealtimeSubscriptions();
+  }, []);
 
-        // Fetch all login activity
-        const activityResponse = await authService.getAllLoginActivity();
-        if (activityResponse.error) throw activityResponse.error;
-        setLoginActivity(activityResponse.data || []);
+  // Query for user profiles
+  const { 
+    data: users = [], 
+    isLoading: isLoadingUsers,
+    refetch: refetchUsers
+  } = useQuery({
+    queryKey: ['userProfiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data as UserProfile[];
+    }
+  });
 
-      } catch (error) {
-        console.error('Error fetching admin data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load user data. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+  // Query for login activity
+  const { 
+    data: loginActivity = [], 
+    isLoading: isLoadingActivity,
+    refetch: refetchActivity
+  } = useQuery({
+    queryKey: ['loginActivity'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('login_activity')
+        .select('*, profiles(*)')
+        .order('login_time', { ascending: false });
+        
+      if (error) throw error;
+      
+      // Transform the data to match our type
+      return data.map(item => ({
+        ...item,
+        profiles: item.profiles as UserProfile
+      })) as LoginActivity[];
+    }
+  });
+
+  // Set up real-time listeners to refresh data
+  useEffect(() => {
+    const profilesChannel = supabase
+      .channel('profiles-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles' 
+      }, () => {
+        refetchUsers();
+      })
+      .subscribe();
+
+    const loginChannel = supabase
+      .channel('login-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'login_activity' 
+      }, () => {
+        refetchActivity();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(loginChannel);
     };
+  }, [refetchUsers, refetchActivity]);
 
-    fetchData();
-  }, [toast]);
+  const isLoading = isLoadingUsers || isLoadingActivity;
 
   const handleSignOut = async () => {
     await signOut();
@@ -78,21 +125,13 @@ const Admin = () => {
 
   // Calculate statistics
   const totalUsers = users.length;
+  const todayDate = new Date().toDateString();
+  
   const activeUsersToday = new Set(
     loginActivity
-      .filter(log => {
-        const logDate = new Date(log.login_time);
-        const today = new Date();
-        return logDate.toDateString() === today.toDateString();
-      })
+      .filter(log => new Date(log.login_time).toDateString() === todayDate)
       .map(log => log.user_id)
   ).size;
-
-  const loginsByDay = loginActivity.reduce((acc: Record<string, number>, log) => {
-    const date = new Date(log.login_time).toLocaleDateString();
-    acc[date] = (acc[date] || 0) + 1;
-    return acc;
-  }, {});
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -128,7 +167,13 @@ const Admin = () => {
                 <CardDescription>Number of user logins per day</CardDescription>
               </CardHeader>
               <CardContent>
-                <LoginActivityChart data={loginsByDay} />
+                {isLoadingActivity ? (
+                  <div className="flex items-center justify-center h-80">
+                    <p>Loading activity data...</p>
+                  </div>
+                ) : (
+                  <LoginActivityChart data={loginActivity} />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -187,7 +232,7 @@ const Admin = () => {
             </TabsList>
             
             <TabsContent value="users">
-              {isLoading ? (
+              {isLoadingUsers ? (
                 <div className="flex justify-center py-12">
                   <p>Loading user data...</p>
                 </div>
@@ -221,7 +266,7 @@ const Admin = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {isLoading ? (
+                    {isLoadingActivity ? (
                       <tr>
                         <td colSpan={4} className="py-6 text-center">Loading activity data...</td>
                       </tr>
@@ -231,7 +276,7 @@ const Admin = () => {
                       </tr>
                     ) : (
                       loginActivity.map((activity, index) => (
-                        <tr key={index} className="border-b">
+                        <tr key={activity.id || index} className="border-b">
                           <td className="py-3 px-4">{activity.profiles?.name || 'Unknown'}</td>
                           <td className="py-3 px-4">{activity.profiles?.email || 'Unknown'}</td>
                           <td className="py-3 px-4">
@@ -273,6 +318,11 @@ const Admin = () => {
                 <p className="text-sm">
                   <span className="font-medium">Joined:</span> {new Date(selectedUser.created_at).toLocaleDateString()}
                 </p>
+                {selectedUser.last_login && (
+                  <p className="text-sm">
+                    <span className="font-medium">Last Login:</span> {new Date(selectedUser.last_login).toLocaleString()}
+                  </p>
+                )}
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setSelectedUser(null)}>

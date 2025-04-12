@@ -1,6 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
-import { UserProfile } from '@/lib/supabase';
+import { supabase, UserProfile } from '@/lib/supabase';
 
 export const authService = {
   // Sign up a new user
@@ -45,9 +44,10 @@ export const authService = {
 
       if (error) throw error;
       
-      // Track login activity
+      // Track login activity and update last_login
       if (data.user) {
         await this.trackLoginActivity(data.user.id);
+        await this.updateLastLogin(data.user.id);
       }
       
       return { data, error: null };
@@ -216,12 +216,15 @@ export const authService = {
   // Track login activity
   async trackLoginActivity(userId: string) {
     try {
+      // Get the user's IP address (in a real app, you'd get this from the server)
+      const ipAddress = await this.getUserIpAddress();
+      
       const { data, error } = await supabase
         .from('login_activity')
         .insert([{ 
           user_id: userId,
           login_time: new Date().toISOString(),
-          ip_address: 'anonymous' // In a real app, you'd capture the IP
+          ip_address: ipAddress
         }]);
 
       if (error) throw error;
@@ -230,6 +233,35 @@ export const authService = {
     } catch (error) {
       console.error('Error tracking login activity:', error);
       return { data: null, error };
+    }
+  },
+
+  // Update last login timestamp
+  async updateLastLogin(userId: string) {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating last login:', error);
+      return { error };
+    }
+  },
+
+  // Get a user's IP address
+  async getUserIpAddress() {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.error('Error getting IP address:', error);
+      return 'unknown';
     }
   },
 

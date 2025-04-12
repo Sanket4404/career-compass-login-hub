@@ -9,28 +9,47 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { format, subDays, isSameDay } from 'date-fns';
+import { LoginActivity } from '@/lib/supabase';
 
 interface LoginActivityChartProps {
-  data: Record<string, number>;
+  data: LoginActivity[];
 }
 
 export const LoginActivityChart = ({ data }: LoginActivityChartProps) => {
-  // Convert data object to array format for Recharts
-  const chartData = Object.entries(data)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-14); // Show last 14 days
+  // Generate data for the last 14 days
+  const today = new Date();
+  const last14Days = Array.from({ length: 14 }, (_, i) => {
+    const date = subDays(today, 13 - i);
+    return {
+      date: format(date, 'yyyy-MM-dd'),
+      displayDate: format(date, 'MMM dd'),
+      count: 0
+    };
+  });
+
+  // Count logins for each day
+  data.forEach(login => {
+    const loginDate = new Date(login.login_time);
+    const dayIndex = last14Days.findIndex(day => 
+      isSameDay(new Date(day.date), loginDate)
+    );
+    
+    if (dayIndex !== -1) {
+      last14Days[dayIndex].count += 1;
+    }
+  });
 
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
-          data={chartData}
+          data={last14Days}
           margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis 
-            dataKey="date" 
+            dataKey="displayDate" 
             angle={-45} 
             textAnchor="end" 
             tick={{ fontSize: 12 }}
@@ -39,7 +58,10 @@ export const LoginActivityChart = ({ data }: LoginActivityChartProps) => {
             allowDecimals={false}
             tick={{ fontSize: 12 }}
           />
-          <Tooltip />
+          <Tooltip 
+            formatter={(value) => [`${value} login${value !== 1 ? 's' : ''}`, 'Logins']}
+            labelFormatter={(label) => `Date: ${label}`}
+          />
           <Bar 
             dataKey="count" 
             name="Logins" 
