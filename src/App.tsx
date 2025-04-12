@@ -10,6 +10,8 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import OAuthRedirectHandler from "./components/OAuthRedirectHandler";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -18,8 +20,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
-    // You could add a loading spinner here
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+        <p className="text-muted-foreground">Loading your account...</p>
+      </div>
+    );
   }
   
   if (!user) {
@@ -29,34 +35,51 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Admin route component - requires user to be logged in
+// Admin route component - requires user to be logged in AND have admin role
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
   
   if (isLoading) {
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+        <p className="text-muted-foreground">Checking permissions...</p>
+      </div>
+    );
   }
   
   if (!user) {
     return <Navigate to="/" replace />;
   }
   
-  // In a real app, you'd check if the user has admin privileges here
-  // For now, we'll allow any logged-in user to access the admin page
+  // Only users with admin role can access this route
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
   
   return <>{children}</>;
 };
 
 // Auth route component - redirects to dashboard if already logged in
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
   
   if (isLoading) {
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+        <p className="text-muted-foreground">Checking authentication...</p>
+      </div>
+    );
   }
   
+  // Redirect based on user role
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    if (isAdmin) {
+      return <Navigate to="/admin" replace />;
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
   
   return <>{children}</>;
@@ -67,6 +90,7 @@ const AppRoutes = () => (
     <Route path="/" element={<AuthRoute><Index /></AuthRoute>} />
     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+    <Route path="/auth/callback" element={<OAuthRedirectHandler />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
     <Route path="*" element={<NotFound />} />
   </Routes>
@@ -74,15 +98,15 @@ const AppRoutes = () => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
           <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

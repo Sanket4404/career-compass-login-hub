@@ -18,6 +18,7 @@ export type UserProfile = {
   id: string;
   name: string;
   email: string;
+  role: 'user' | 'admin';
   avatar_url?: string;
   created_at: string;
   last_login?: string;

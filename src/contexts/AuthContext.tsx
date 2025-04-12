@@ -1,9 +1,9 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, UserProfile } from '@/lib/supabase';
 import { authService } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
-import { UserProfile } from '@/lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 type AuthContextType = {
   user: any; // Supabase user object
@@ -16,6 +16,7 @@ type AuthContextType = {
   forgotPassword: (email: string) => Promise<any>;
   verifyOTPAndResetPassword: (otp: string, email: string, newPassword: string) => Promise<any>;
   signOut: () => Promise<any>;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,7 +25,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Get initial session
@@ -36,6 +39,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data?.session?.user) {
           const profileResult = await authService.getCurrentUserProfile();
           setProfile(profileResult.data);
+          
+          // Set admin status based on profile role
+          if (profileResult.data?.role === 'admin') {
+            setIsAdmin(true);
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -48,13 +56,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
       setUser(session?.user || null);
       
       if (session?.user) {
         const profileResult = await authService.getCurrentUserProfile();
         setProfile(profileResult.data);
+        
+        // Set admin status based on profile role
+        if (profileResult.data?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+        
+        // Redirect based on role if just logged in
+        if (event === 'SIGNED_IN') {
+          if (profileResult.data?.role === 'admin') {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
+        }
       } else {
         setProfile(null);
+        setIsAdmin(false);
+        
+        // Redirect to login if signed out
+        if (event === 'SIGNED_OUT') {
+          navigate('/');
+        }
       }
       
       setIsLoading(false);
@@ -63,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signUp = async (email: string, password: string, name: string) => {
     setIsLoading(true);
@@ -182,6 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     forgotPassword,
     verifyOTPAndResetPassword,
     signOut,
+    isAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

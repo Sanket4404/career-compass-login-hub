@@ -23,6 +23,7 @@ export const authService = {
           id: data.user.id,
           name,
           email,
+          role: 'user', // Default role for new users
           created_at: new Date().toISOString(),
         });
       }
@@ -62,6 +63,9 @@ export const authService = {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        }
       });
 
       if (error) throw error;
@@ -78,6 +82,9 @@ export const authService = {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'linkedin',
+        options: {
+          redirectTo: window.location.origin,
+        }
       });
 
       if (error) throw error;
@@ -85,6 +92,50 @@ export const authService = {
       return { data, error: null };
     } catch (error) {
       console.error('Error signing in with LinkedIn:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Create or update profile after OAuth sign in
+  async handleOAuthSession() {
+    try {
+      const { data: sessionData } = await this.getSession();
+      
+      if (!sessionData?.session?.user) {
+        return { data: null, error: new Error('No user session found') };
+      }
+      
+      const user = sessionData.session.user;
+      
+      // Check if user profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (!existingProfile) {
+        // Create new profile for OAuth user
+        const userMetadata = user.user_metadata;
+        const name = userMetadata.full_name || userMetadata.name || 'User';
+        const email = user.email || '';
+        
+        await this.createProfile({
+          id: user.id,
+          name,
+          email,
+          role: 'user', // Default role for OAuth users
+          created_at: new Date().toISOString(),
+        });
+      }
+      
+      // Track login and update last login
+      await this.trackLoginActivity(user.id);
+      await this.updateLastLogin(user.id);
+      
+      return { data: user, error: null };
+    } catch (error) {
+      console.error('Error handling OAuth session:', error);
       return { data: null, error };
     }
   },
@@ -156,6 +207,24 @@ export const authService = {
       return { data, error: null };
     } catch (error) {
       console.error('Error creating profile:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Update user role
+  async updateUserRole(userId: string, role: 'user' | 'admin') {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId)
+        .select();
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating user role:', error);
       return { data: null, error };
     }
   },
