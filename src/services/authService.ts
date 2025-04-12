@@ -45,6 +45,11 @@ export const authService = {
 
       if (error) throw error;
       
+      // Track login activity
+      if (data.user) {
+        await this.trackLoginActivity(data.user.id);
+      }
+      
       return { data, error: null };
     } catch (error) {
       console.error('Error signing in:', error);
@@ -190,4 +195,76 @@ export const authService = {
       return { data: null, error };
     }
   },
+
+  // Get all user profiles (for admin dashboard)
+  async getAllUserProfiles() {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error getting all user profiles:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Track login activity
+  async trackLoginActivity(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('login_activity')
+        .insert([{ 
+          user_id: userId,
+          login_time: new Date().toISOString(),
+          ip_address: 'anonymous' // In a real app, you'd capture the IP
+        }]);
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error tracking login activity:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get user login activity
+  async getUserLoginActivity(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('login_activity')
+        .select('*')
+        .eq('user_id', userId)
+        .order('login_time', { ascending: false });
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error getting user login activity:', error);
+      return { data: null, error };
+    }
+  },
+
+  // Get all login activity (for admin dashboard)
+  async getAllLoginActivity() {
+    try {
+      const { data, error } = await supabase
+        .from('login_activity')
+        .select('*, profiles!inner(*)')
+        .order('login_time', { ascending: false });
+
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error getting all login activity:', error);
+      return { data: null, error };
+    }
+  }
 };

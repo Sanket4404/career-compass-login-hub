@@ -32,3 +32,11 @@ export type CareerAssessment = {
   strengths: string[];
   areas_to_improve: string[];
 }
+
+// Define login activity type
+export type LoginActivity = {
+  id: string;
+  user_id: string;
+  login_time: string;
+  ip_address: string;
+}

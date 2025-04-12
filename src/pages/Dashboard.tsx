@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { BrainCog, BarChart, GraduationCap, BookOpen, Award, Users, LogOut, UserCircle } from 'lucide-react';
+import { BrainCog, BarChart, GraduationCap, BookOpen, Award, Users, LogOut, UserCircle, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { careerService } from '@/services/careerService';
@@ -47,6 +47,10 @@ const Dashboard = () => {
           <div className="text-sm text-muted-foreground">
             Welcome, <span className="font-medium text-foreground">{profile?.name || user?.email}</span>
           </div>
+          <Button variant="outline" onClick={() => navigate('/admin')}>
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            Admin
+          </Button>
           <Button variant="outline" onClick={() => {}}>
             <UserCircle className="mr-2 h-4 w-4" />
             Profile
